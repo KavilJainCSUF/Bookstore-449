@@ -5,7 +5,11 @@ import uvicorn
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorClient
 
-#Pydantic model for the book data 
+#Team 10
+#Anuj Patel
+#Kavil Jain
+
+#Requirement 1: Pydantic model for the book data 
 class Book(BaseModel):
     title: str
     author: str
@@ -14,21 +18,22 @@ class Book(BaseModel):
     stock: int
 app = FastAPI()
 
-#connect to MongoDB
+#Requirement 2: making connection to MongoDB Client
 client = AsyncIOMotorClient("mongodb://localhost:27017")
 database= client["bookstore"]
 collection = database["books"]
 
-# Create an index on the "title" field
+#Requirement 3: Creating index
+# Creating a normal index on the "title" field for easy fetching of data
 collection.create_index("title")
 
-# Create a compound index on the "title" and "author" fields
+# Creating a compound index on the "title" and "author" fields for easy fetching of data on multiple indexes
 collection.create_index([("title", 1), ("author", 1), ("price",1),('stock',1)])
 
 
 
-
-# fetch data from database
+#Requirement 4: Creating API's
+# fetch books data from database
 @app.get("/books")
 async def get_books():
     books = []
@@ -36,14 +41,14 @@ async def get_books():
         books.append(book)
     return books
 
-# search book by title, author and price range
+# search books data using filter by title, author and price range
 @app.get("/search")
 async def search(title: str = None, author: str = None,
                  min_price: float = None, max_price: float = None):
     books = await search_books(title, author, min_price, max_price)
     return {"books": books}
 
-#Add a new book with validation
+#Adding a new book in the database with validation
 @app.post("/books")
 async def create_book(book: Book):
     try:
@@ -59,7 +64,7 @@ async def create_book(book: Book):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-#Update an existing book by id
+#Updating data of an existing book by id
 @app.put("/books/{book_id}")
 async def update_book(book_id: str, book: Book):
     updated_book = book.dict()
@@ -70,7 +75,7 @@ async def update_book(book_id: str, book: Book):
     else:
         return {"message": "Book not found"}
     
-#delete a book
+#Deleting a book based on id
 @app.delete("/books/{book_id}")
 async def delete_book(book_id: str):
     result = await collection.delete_one({"_id": ObjectId(book_id)})
@@ -78,9 +83,9 @@ async def delete_book(book_id: str):
         return {"message": "Book deleted successfully"}
     else:
         return {"message": "Book not found"}
-#Aggregation
-###################################
-#search total number of books
+
+
+#searching total number of books using Aggregation
 @app.get("/stats/total-books")
 async def get_total_books():
     pipeline = [{"$count": "total_books"}]
@@ -90,7 +95,7 @@ async def get_total_books():
     else:
         return 0
 
-#top selling books
+#fetching top selling books based on stock
 @app.get("/stats/best-selling")
 async def get_best_selling_books():
     pipeline = [
@@ -101,7 +106,7 @@ async def get_best_selling_books():
     result = await collection.aggregate(pipeline).to_list(length=None)
     return result
     
-#top selling author
+#fetching top selling author based on total books
 @app.get("/stats/top-authors")
 async def get_top_authors():
     pipeline = [
@@ -111,10 +116,9 @@ async def get_top_authors():
     ]
     result = await collection.aggregate(pipeline).to_list(length=None)
     return result
-############################
 
 
-#fetch a book by id
+#fetching a book by id
 @app.get("/books/{book_id}")
 async def get_book_by_id(book_id: str):
 
@@ -128,17 +132,8 @@ async def get_book_by_id(book_id: str):
     except:
         raise HTTPException(status_code=400, detail="Invalid book ID")
     
-######################
-'''
-You will use MongoDB's query operators to implement the following search functionality:
 
-●	Search for books by title
-●	Search for books by author
-●	Search for books by price range
-'''
-
-
-######################
+#Fetching book details based on filters
 async def get_books_by_title(title: str):
     # Perform a case-insensitive search for books by author name
     query = {"title": {"$regex": f".{title}.", "$options": "i"}}
@@ -158,7 +153,7 @@ async def search_books_by_title(title: str):
         return {"books": books}
     else:
         raise HTTPException(status_code=404, detail="Book not found")
-##################
+
 async def get_books_by_author(author: str):
     # Perform a case-insensitive search for books by author name
     query = {"author": {"$regex": f".{author}.", "$options": "i"}}
@@ -178,7 +173,7 @@ async def search_books_by_author(author: str):
         return {"books": books}
     else:
         raise HTTPException(status_code=404, detail="Book not found")
-################
+
 async def get_books_by_price_range(min_price: float, max_price: float):
     # Perform a search for books within the specified price range
     query = {"price": {"$gte": min_price, "$lte": max_price}}
@@ -196,7 +191,7 @@ async def search_books_by_price_range(min_price: float, max_price: float):
     return {"books": books}
 
 
-#search by path
+#searching for books by passing path parameters
 async def search_books(title: str = None, author: str = None,
                         min_price: float = None, max_price: float = None):
     query = {}
